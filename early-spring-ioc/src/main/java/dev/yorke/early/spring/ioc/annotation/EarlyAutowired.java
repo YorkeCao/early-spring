@@ -3,6 +3,8 @@ package dev.yorke.early.spring.ioc.annotation;
 import java.lang.annotation.*;
 
 /**
+ * 标记由IOC容器注入的变量
+ *
  * @author Yorke
  */
 @Target({ElementType.FIELD})

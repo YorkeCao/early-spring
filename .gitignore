@@ -4,3 +4,8 @@ early-spring-ioc/early-spring-ioc.iml
 early-spring-ioc/target/
 early-spring-demo/target/
 early-spring-demo/early-spring-demo.iml
+.project
+.vscode/
+.settings/
+early-spring-demo/.classpath
+early-spring-ioc/.classpath
