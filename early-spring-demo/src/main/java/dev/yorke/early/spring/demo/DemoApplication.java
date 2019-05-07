@@ -6,13 +6,15 @@ import dev.yorke.early.spring.ioc.container.EarlyBeanContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
+
 /**
- * @author DELL
+ * @author Yorke
  */
 public class DemoApplication {
     private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
 
-    public static void main(String[] args) throws IllegalAccessException, InstantiationException, ClassNotFoundException {
+    public static void main(String[] args) throws IllegalAccessException, InstantiationException, ClassNotFoundException, InvocationTargetException {
         // 扫描并装载 bean
         BeanContainer beanContainer = new EarlyBeanContainer();
         // 通过 bean 容器获取 bean

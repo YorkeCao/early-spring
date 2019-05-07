@@ -2,6 +2,7 @@ package dev.yorke.early.spring.ioc.container;
 
 import dev.yorke.early.spring.ioc.annotation.EarlyAutowired;
 import dev.yorke.early.spring.ioc.annotation.EarlyComponent;
+import dev.yorke.early.spring.ioc.annotation.EarlyConfiguration;
 import dev.yorke.early.spring.ioc.exception.IocException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -10,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,11 +27,11 @@ public class EarlyBeanContainer implements BeanContainer {
 
     private Map<String, Object> iocBeanMap = new HashMap<>();
 
-    public EarlyBeanContainer() throws IllegalAccessException, ClassNotFoundException, InstantiationException {
+    public EarlyBeanContainer() throws IllegalAccessException, ClassNotFoundException, InstantiationException, InvocationTargetException {
         loadBeans("");
     }
 
-    public EarlyBeanContainer(String scanPackage) throws IllegalAccessException, ClassNotFoundException, InstantiationException {
+    public EarlyBeanContainer(String scanPackage) throws IllegalAccessException, ClassNotFoundException, InstantiationException, InvocationTargetException {
         loadBeans(scanPackage);
     }
 
@@ -42,7 +45,7 @@ public class EarlyBeanContainer implements BeanContainer {
         return iocBeanMap.containsKey(beanName);
     }
 
-    private void loadBeans(String scanPackage) throws IllegalAccessException, InstantiationException, ClassNotFoundException {
+    private void loadBeans(String scanPackage) throws IllegalAccessException, InstantiationException, ClassNotFoundException, InvocationTargetException {
         // 扫描指定包下的类
         log.info("正在扫描类...");
         Set<String> classSet = scanClasses(scanPackage.replace(".", "/"));
@@ -94,14 +97,37 @@ public class EarlyBeanContainer implements BeanContainer {
     /**
      * 装载控制反转的类
      */
-    private void loadIocBeans(Set<String> classSet) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+    private void loadIocBeans(Set<String> classSet) throws ClassNotFoundException, IllegalAccessException, InstantiationException, InvocationTargetException {
         for (String className : classSet) {
             Class classZ = Class.forName(className);
-            Annotation a = classZ.getDeclaredAnnotation(EarlyComponent.class);
-            if (a instanceof EarlyComponent) {
-                EarlyComponent demoComponent = (EarlyComponent) a;
-                String beanName = toLowercaseIndex(StringUtils.isNotEmpty(demoComponent.value()) ? demoComponent.value() : classZ.getSimpleName());
+            Annotation componentAnnotaion = classZ.getDeclaredAnnotation(EarlyComponent.class);
+            if (componentAnnotaion instanceof EarlyComponent) {
+                EarlyComponent earlyComponent = (EarlyComponent) componentAnnotaion;
+                String beanName = toLowercaseIndex(StringUtils.isNotEmpty(earlyComponent.value()) ? earlyComponent.value() : classZ.getSimpleName());
                 iocBeanMap.put(beanName, classZ.newInstance());
+            }
+            Annotation configurationAnnotaion = classZ.getDeclaredAnnotation(EarlyConfiguration.class);
+            if (configurationAnnotaion instanceof EarlyConfiguration) {
+                EarlyConfiguration earlyConfiguration = (EarlyConfiguration) configurationAnnotaion;
+                String beanName = toLowercaseIndex(StringUtils.isNotEmpty(earlyConfiguration.value()) ? earlyConfiguration.value() : classZ.getSimpleName());
+                iocBeanMap.put(beanName, classZ.newInstance());
+                loadConfigBeans(classZ, beanName);
+            }
+        }
+    }
+
+    /**
+     * 装载配置类中声明的 bean
+     * @param classZ 配置类
+     * @param classBeanName 配置类的 beanName
+     */
+    private void loadConfigBeans(Class classZ, String classBeanName) throws InvocationTargetException, IllegalAccessException {
+        Method[] methods = classZ.getDeclaredMethods();
+        for (Method method : methods) {
+            EarlyComponent earlyComponent = method.getAnnotation(EarlyComponent.class);
+            if (earlyComponent != null) {
+                String beanName = StringUtils.isNotEmpty(earlyComponent.value()) ? earlyComponent.value() : method.getName();
+                iocBeanMap.put(beanName, method.invoke(iocBeanMap.get(classBeanName)));
             }
         }
     }
